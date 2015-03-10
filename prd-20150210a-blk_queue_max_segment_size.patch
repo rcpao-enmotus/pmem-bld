@@ -1,0 +1,12 @@
+diff --git a/drivers/block/pmem.c b/drivers/block/pmem.c
+index 1bd9ab0..0b3c8d6 100644
+--- a/drivers/block/pmem.c
++++ b/drivers/block/pmem.c
+@@ -297,6 +299,7 @@ static struct pmem_device *pmem_alloc(phys_addr_t phys_addr, size_t disk_size,
+ 	blk_queue_make_request(pmem->pmem_queue, pmem_make_request);
+ 	blk_queue_max_hw_sectors(pmem->pmem_queue, 1024);
+ 	blk_queue_bounce_limit(pmem->pmem_queue, BLK_BOUNCE_ANY);
++	blk_queue_max_segment_size(pmem->pmem_queue, PAGE_SIZE);
+ 
+ 	disk = alloc_disk(0);
+ 	if (unlikely(!disk)) {

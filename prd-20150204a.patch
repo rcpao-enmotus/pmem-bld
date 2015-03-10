@@ -1,0 +1,56 @@
+From 9dbd5ae0b7369862e71d28e465372b75cd363e9c Mon Sep 17 00:00:00 2001
+From: Ross Zwisler <ross.zwisler@linux.intel.com>
+Date: Wed, 4 Feb 2015 14:58:43 -0700
+Subject: [PATCH] TEST pmem: Skip memory reservation for PMEM region
+
+Skip the memory reservation step for the memory consumed by PMEM.  This
+is a quick workaround for systems that have real NVDIMMs that don't show
+up as kernel usable in the e820 table.
+
+Compile tested only.
+
+Signed-off-by: Ross Zwisler <ross.zwisler@linux.intel.com>
+---
+ drivers/block/pmem.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/block/pmem.c b/drivers/block/pmem.c
+index 1bd9ab0..078ad09 100644
+--- a/drivers/block/pmem.c
++++ b/drivers/block/pmem.c
+@@ -238,6 +238,7 @@ int pmem_mapmem(struct pmem_device *pmem)
+ 	struct resource *res_mem;
+ 	int err;
+ 
++	/*
+ 	res_mem = request_mem_region_exclusive(pmem->phys_addr, pmem->size,
+ 					       "pmem");
+ 	if (!res_mem) {
+@@ -245,6 +246,7 @@ int pmem_mapmem(struct pmem_device *pmem)
+ 			   pmem->phys_addr, pmem->size);
+ 		return -EINVAL;
+ 	}
++	*/
+ 
+ 	pmem->virt_addr = ioremap_cache(pmem->phys_addr, pmem->size);
+ 	if (unlikely(!pmem->virt_addr)) {
+@@ -254,7 +256,7 @@ int pmem_mapmem(struct pmem_device *pmem)
+ 	return 0;
+ 
+ out_release:
+-	release_mem_region(pmem->phys_addr, pmem->size);
++//	release_mem_region(pmem->phys_addr, pmem->size);
+ 	return err;
+ }
+ 
+@@ -264,7 +266,7 @@ void pmem_unmapmem(struct pmem_device *pmem)
+ 		return;
+ 
+ 	iounmap(pmem->virt_addr);
+-	release_mem_region(pmem->phys_addr, pmem->size);
++//	release_mem_region(pmem->phys_addr, pmem->size);
+ 	pmem->virt_addr = NULL;
+ }
+ 
+-- 
+1.9.3
