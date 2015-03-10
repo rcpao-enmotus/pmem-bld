@@ -1,9 +1,12 @@
 #!/bin/bash
 
-if [ ! -d pmem ]; then
-	git clone git://git.open-osd.org/pmem.git
+CWDIR=`pwd`
+DSTDIR=../pmem
+
+if [ ! -d $DSTDIR ]; then
+	git clone git://git.open-osd.org/pmem.git $DSTDIR
 else
-	cd pmem
+	pushd $DSTDIR
 	git pull
 #[rcpao@test27 pmem]$ git branch -a
 #* pmem
@@ -14,10 +17,10 @@ else
 #  remotes/origin/pmem-jens-3.17-rc1
 #  remotes/origin/ross-pmem
 #[rcpao@test27 pmem]$ 
-	cd ..
+	popd
 fi
 
-cd pmem
+cd $DSTDIR
 # cp /boot/config-`uname -r` .config
 cp /boot/config-2.6.32-431.el6.x86_64 .config
 # cp /boot/config-2.6.32-504.3.3.el6.x86_64 .config
