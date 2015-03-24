@@ -16,9 +16,11 @@ else
 #  remotes/origin/pmem
 #  remotes/origin/pmem-jens-3.17-rc1
 #  remotes/origin/ross-pmem
-#[rcpao@test27 pmem]$ 
+#[rcpao@test27 pmem]$ git rev-parse --verify HEAD
+#3ae6642a5512cf27974dd8ef68c57bdc2fae9e1a
 	popd
 fi
+
 
 cd $DSTDIR
 # cp /boot/config-`uname -r` .config

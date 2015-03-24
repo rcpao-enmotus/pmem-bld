@@ -6,8 +6,10 @@ DSTDIR=../prd
 if [ ! -d $DSTDIR ]; then
 	git clone https://github.com/01org/prd $DSTDIR
 else
-	pushd prd
+	pushd $DSTDIR
 	git pull
+#[rcpao@test27 prd]$ git rev-parse --verify HEAD
+#5fe4d7124b58422a51960a68f3d98a92cdb8f300
 	popd
 fi
 
@@ -21,8 +23,8 @@ CONFIG_BLK_DEV_PMEM=m
 CONFIG_BLK_DEV_PMEM_IGNORE_REQUEST_MEM_RET=y
 EOF
 
-git apply $CWDIR/prd-20150204a.patch
-patch -p1 -i $CWDIR/prd-20150210a-blk_queue_max_segment_size.patch
+# git apply $CWDIR/prd-20150204a.patch
+# patch -p1 -i $CWDIR/prd-20150210a-blk_queue_max_segment_size.patch
 
 make olddefconfig
 make -j10

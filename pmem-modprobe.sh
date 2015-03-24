@@ -2,11 +2,17 @@
 
 # pmem-modprobe.sh
 
+
+# 4 * 8GB RDIMMs + 1 * 8GB NVDIMM
+sudo modprobe pmem map=8G\@34G
+
 # 4 * 8GB RDIMMs + 2 * 8GB NVDIMM
 # BIOS-e820: [mem 0x0000000880000000-0x0000000c7fffffff] unknown-12
-sudo modprobe pmem map=16G\@34G
+#sudo modprobe pmem map=16G\@34G
+
 
 exit
+
 
 # 2 * 8GB RDIMMs + 1 * 4GB NVDIMM
 
