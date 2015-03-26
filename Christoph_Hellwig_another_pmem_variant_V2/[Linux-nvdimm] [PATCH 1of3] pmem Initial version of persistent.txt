@@ -1,0 +1,517 @@
+Delivered-To: rcpao.enmotus@gmail.com
+Received: by 10.112.50.39 with SMTP id z7csp482750lbn;
+        Thu, 26 Mar 2015 01:33:22 -0700 (PDT)
+X-Received: by 10.68.248.39 with SMTP id yj7mr24853932pbc.58.1427358801464;
+        Thu, 26 Mar 2015 01:33:21 -0700 (PDT)
+Return-Path: <linux-nvdimm-bounces@lists.01.org>
+Received: from ml01.01.org (ml01.01.org. [198.145.21.10])
+        by mx.google.com with ESMTPS id os6si7376018pdb.81.2015.03.26.01.33.20
+        (version=TLSv1.2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);
+        Thu, 26 Mar 2015 01:33:21 -0700 (PDT)
+Received-SPF: none (google.com: linux-nvdimm-bounces@lists.01.org does not designate permitted sender hosts) client-ip=198.145.21.10;
+Authentication-Results: mx.google.com;
+       spf=none (google.com: linux-nvdimm-bounces@lists.01.org does not designate permitted sender hosts) smtp.mail=linux-nvdimm-bounces@lists.01.org
+Received: from ml01.vlan14.01.org (localhost [IPv6:::1])
+	by ml01.01.org (Postfix) with ESMTP id 7DA7E8124F;
+	Thu, 26 Mar 2015 01:33:20 -0700 (PDT)
+X-Original-To: linux-nvdimm@ml01.01.org
+Delivered-To: linux-nvdimm@ml01.01.org
+Received: from bombadil.infradead.org (bombadil.infradead.org
+ [IPv6:2001:1868:205::9])
+ (using TLSv1.2 with cipher ECDHE-RSA-AES256-GCM-SHA384 (256/256 bits))
+ (No client certificate requested)
+ by ml01.01.org (Postfix) with ESMTPS id 8D4D280F31
+ for <linux-nvdimm@ml01.01.org>; Thu, 26 Mar 2015 01:33:19 -0700 (PDT)
+Received: from [83.175.99.196] (helo=localhost)
+ by bombadil.infradead.org with esmtpsa (Exim 4.80.1 #2 (Red Hat Linux))
+ id 1Yb3E5-0006rE-6E; Thu, 26 Mar 2015 08:33:18 +0000
+From: Christoph Hellwig <hch@lst.de>
+To: linux-nvdimm@ml01.01.org, linux-fsdevel@vger.kernel.org,
+ linux-kernel@vger.kernel.org, x86@kernel.org
+Date: Thu, 26 Mar 2015 09:32:42 +0100
+Message-Id: <1427358764-6126-2-git-send-email-hch@lst.de>
+X-Mailer: git-send-email 1.9.1
+In-Reply-To: <1427358764-6126-1-git-send-email-hch@lst.de>
+References: <1427358764-6126-1-git-send-email-hch@lst.de>
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by
+ bombadil.infradead.org See http://www.infradead.org/rpr.html
+X-SRS-Rewrite: SMTP reverse-path rewritten from <hch@infradead.org> by
+ bombadil.infradead.org See http://www.infradead.org/rpr.html
+Cc: axboe@kernel.dk
+Subject: [Linux-nvdimm] [PATCH 1/3] pmem: Initial version of persistent
+	memory driver
+X-BeenThere: linux-nvdimm@lists.01.org
+X-Mailman-Version: 2.1.15
+Precedence: list
+List-Id: "Linux-nvdimm developer list." <linux-nvdimm.lists.01.org>
+List-Unsubscribe: <https://lists.01.org/mailman/options/linux-nvdimm>,
+ <mailto:linux-nvdimm-request@lists.01.org?subject=unsubscribe>
+List-Archive: <http://lists.01.org/pipermail/linux-nvdimm/>
+List-Post: <mailto:linux-nvdimm@lists.01.org>
+List-Help: <mailto:linux-nvdimm-request@lists.01.org?subject=help>
+List-Subscribe: <https://lists.01.org/mailman/listinfo/linux-nvdimm>,
+ <mailto:linux-nvdimm-request@lists.01.org?subject=subscribe>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+Errors-To: linux-nvdimm-bounces@lists.01.org
+Sender: "Linux-nvdimm" <linux-nvdimm-bounces@lists.01.org>
+
+From: Ross Zwisler <ross.zwisler@linux.intel.com>
+
+PMEM is a new driver that presents a reserved range of memory as a
+block device.  This is useful for developing with NV-DIMMs, and
+can be used with volatile memory as a development platform.
+
+Signed-off-by: Ross Zwisler <ross.zwisler@linux.intel.com>
+[hch: convert to use a platform_device for discovery, fix partition
+ support]
+Signed-off-by: Christoph Hellwig <hch@lst.de>
+Tested-by: Ross Zwisler <ross.zwisler@linux.intel.com>
+---
+ MAINTAINERS            |   6 +
+ drivers/block/Kconfig  |  13 ++
+ drivers/block/Makefile |   1 +
+ drivers/block/pmem.c   | 373 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 393 insertions(+)
+ create mode 100644 drivers/block/pmem.c
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 358eb01..efacf2b 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -8063,6 +8063,12 @@ S:	Maintained
+ F:	Documentation/blockdev/ramdisk.txt
+ F:	drivers/block/brd.c
+ 
++PERSISTENT MEMORY DRIVER
++M:	Ross Zwisler <ross.zwisler@linux.intel.com>
++L:	linux-nvdimm@lists.01.org
++S:	Supported
++F:	drivers/block/pmem.c
++
+ RANDOM NUMBER DRIVER
+ M:	"Theodore Ts'o" <tytso@mit.edu>
+ S:	Maintained
+diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
+index 1b8094d..9284aaf 100644
+--- a/drivers/block/Kconfig
++++ b/drivers/block/Kconfig
+@@ -404,6 +404,19 @@ config BLK_DEV_RAM_DAX
+ 	  and will prevent RAM block device backing store memory from being
+ 	  allocated from highmem (only a problem for highmem systems).
+ 
++config BLK_DEV_PMEM
++	tristate "Persistent memory block device support"
++	help
++	  Saying Y here will allow you to use a contiguous range of reserved
++	  memory as one or more block devices.  Memory for PMEM should be
++	  reserved using the "memmap" kernel parameter.
++
++	  To compile this driver as a module, choose M here: the module will be
++	  called pmem.
++
++	  Most normal users won't need this functionality, and can thus say N
++	  here.
++
+ config CDROM_PKTCDVD
+ 	tristate "Packet writing on CD/DVD media"
+ 	depends on !UML
+diff --git a/drivers/block/Makefile b/drivers/block/Makefile
+index 02b688d..9cc6c18 100644
+--- a/drivers/block/Makefile
++++ b/drivers/block/Makefile
+@@ -14,6 +14,7 @@ obj-$(CONFIG_PS3_VRAM)		+= ps3vram.o
+ obj-$(CONFIG_ATARI_FLOPPY)	+= ataflop.o
+ obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
+ obj-$(CONFIG_BLK_DEV_RAM)	+= brd.o
++obj-$(CONFIG_BLK_DEV_PMEM)	+= pmem.o
+ obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
+ obj-$(CONFIG_BLK_CPQ_DA)	+= cpqarray.o
+ obj-$(CONFIG_BLK_CPQ_CISS_DA)  += cciss.o
+diff --git a/drivers/block/pmem.c b/drivers/block/pmem.c
+new file mode 100644
+index 0000000..545b13b
+--- /dev/null
++++ b/drivers/block/pmem.c
+@@ -0,0 +1,373 @@
++/*
++ * Persistent Memory Driver
++ * Copyright (c) 2014, Intel Corporation.
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms and conditions of the GNU General Public License,
++ * version 2, as published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope it will be useful, but WITHOUT
++ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
++ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
++ * more details.
++ *
++ * This driver is heavily based on drivers/block/brd.c.
++ * Copyright (C) 2007 Nick Piggin
++ * Copyright (C) 2007 Novell Inc.
++ */
++
++#include <asm/cacheflush.h>
++#include <linux/blkdev.h>
++#include <linux/hdreg.h>
++#include <linux/init.h>
++#include <linux/platform_device.h>
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/slab.h>
++
++#define SECTOR_SHIFT		9
++#define PAGE_SECTORS_SHIFT	(PAGE_SHIFT - SECTOR_SHIFT)
++#define PAGE_SECTORS		(1 << PAGE_SECTORS_SHIFT)
++
++#define PMEM_MINORS		16
++
++struct pmem_device {
++	struct request_queue	*pmem_queue;
++	struct gendisk		*pmem_disk;
++
++	/* One contiguous memory region per device */
++	phys_addr_t		phys_addr;
++	void			*virt_addr;
++	size_t			size;
++};
++
++static int pmem_major;
++static atomic_t pmem_index;
++
++static int pmem_getgeo(struct block_device *bd, struct hd_geometry *geo)
++{
++	/* some standard values */
++	geo->heads = 1 << 6;
++	geo->sectors = 1 << 5;
++	geo->cylinders = get_capacity(bd->bd_disk) >> 11;
++	return 0;
++}
++
++/*
++ * direct translation from (pmem,sector) => void*
++ * We do not require that sector be page aligned.
++ * The return value will point to the beginning of the page containing the
++ * given sector, not to the sector itself.
++ */
++static void *pmem_lookup_pg_addr(struct pmem_device *pmem, sector_t sector)
++{
++	size_t page_offset = sector >> PAGE_SECTORS_SHIFT;
++	size_t offset = page_offset << PAGE_SHIFT;
++
++	BUG_ON(offset >= pmem->size);
++	return pmem->virt_addr + offset;
++}
++
++/* sector must be page aligned */
++static unsigned long pmem_lookup_pfn(struct pmem_device *pmem, sector_t sector)
++{
++	size_t page_offset = sector >> PAGE_SECTORS_SHIFT;
++
++	BUG_ON(sector & (PAGE_SECTORS - 1));
++	return (pmem->phys_addr >> PAGE_SHIFT) + page_offset;
++}
++
++/*
++ * sector is not required to be page aligned.
++ * n is at most a single page, but could be less.
++ */
++static void copy_to_pmem(struct pmem_device *pmem, const void *src,
++			sector_t sector, size_t n)
++{
++	void *dst;
++	unsigned int offset = (sector & (PAGE_SECTORS - 1)) << SECTOR_SHIFT;
++	size_t copy;
++
++	BUG_ON(n > PAGE_SIZE);
++
++	copy = min_t(size_t, n, PAGE_SIZE - offset);
++	dst = pmem_lookup_pg_addr(pmem, sector);
++	memcpy(dst + offset, src, copy);
++
++	if (copy < n) {
++		src += copy;
++		sector += copy >> SECTOR_SHIFT;
++		copy = n - copy;
++		dst = pmem_lookup_pg_addr(pmem, sector);
++		memcpy(dst, src, copy);
++	}
++}
++
++/*
++ * sector is not required to be page aligned.
++ * n is at most a single page, but could be less.
++ */
++static void copy_from_pmem(void *dst, struct pmem_device *pmem,
++			  sector_t sector, size_t n)
++{
++	void *src;
++	unsigned int offset = (sector & (PAGE_SECTORS - 1)) << SECTOR_SHIFT;
++	size_t copy;
++
++	BUG_ON(n > PAGE_SIZE);
++
++	copy = min_t(size_t, n, PAGE_SIZE - offset);
++	src = pmem_lookup_pg_addr(pmem, sector);
++
++	memcpy(dst, src + offset, copy);
++
++	if (copy < n) {
++		dst += copy;
++		sector += copy >> SECTOR_SHIFT;
++		copy = n - copy;
++		src = pmem_lookup_pg_addr(pmem, sector);
++		memcpy(dst, src, copy);
++	}
++}
++
++static void pmem_do_bvec(struct pmem_device *pmem, struct page *page,
++			unsigned int len, unsigned int off, int rw,
++			sector_t sector)
++{
++	void *mem = kmap_atomic(page);
++
++	if (rw == READ) {
++		copy_from_pmem(mem + off, pmem, sector, len);
++		flush_dcache_page(page);
++	} else {
++		/*
++		 * FIXME: Need more involved flushing to ensure that writes to
++		 * NVDIMMs are actually durable before returning.
++		 */
++		flush_dcache_page(page);
++		copy_to_pmem(pmem, mem + off, sector, len);
++	}
++
++	kunmap_atomic(mem);
++}
++
++static void pmem_make_request(struct request_queue *q, struct bio *bio)
++{
++	struct block_device *bdev = bio->bi_bdev;
++	struct pmem_device *pmem = bdev->bd_disk->private_data;
++	int rw;
++	struct bio_vec bvec;
++	sector_t sector;
++	struct bvec_iter iter;
++	int err = 0;
++
++	sector = bio->bi_iter.bi_sector;
++	if (bio_end_sector(bio) > get_capacity(bdev->bd_disk)) {
++		err = -EIO;
++		goto out;
++	}
++
++	BUG_ON(bio->bi_rw & REQ_DISCARD);
++
++	rw = bio_rw(bio);
++	if (rw == READA)
++		rw = READ;
++
++	bio_for_each_segment(bvec, bio, iter) {
++		unsigned int len = bvec.bv_len;
++
++		BUG_ON(len > PAGE_SIZE);
++		pmem_do_bvec(pmem, bvec.bv_page, len,
++			    bvec.bv_offset, rw, sector);
++		sector += len >> SECTOR_SHIFT;
++	}
++
++out:
++	bio_endio(bio, err);
++}
++
++static int pmem_rw_page(struct block_device *bdev, sector_t sector,
++		       struct page *page, int rw)
++{
++	struct pmem_device *pmem = bdev->bd_disk->private_data;
++
++	pmem_do_bvec(pmem, page, PAGE_CACHE_SIZE, 0, rw, sector);
++	page_endio(page, rw & WRITE, 0);
++	return 0;
++}
++
++static long pmem_direct_access(struct block_device *bdev, sector_t sector,
++			      void **kaddr, unsigned long *pfn, long size)
++{
++	struct pmem_device *pmem = bdev->bd_disk->private_data;
++
++	if (!pmem)
++		return -ENODEV;
++
++	*kaddr = pmem_lookup_pg_addr(pmem, sector);
++	*pfn = pmem_lookup_pfn(pmem, sector);
++
++	return pmem->size - (sector * 512);
++}
++
++static const struct block_device_operations pmem_fops = {
++	.owner =		THIS_MODULE,
++	.rw_page =		pmem_rw_page,
++	.direct_access =	pmem_direct_access,
++	.getgeo =		pmem_getgeo,
++};
++
++/* pmem->phys_addr and pmem->size need to be set.
++ * Will then set virt_addr if successful.
++ */
++static int pmem_mapmem(struct pmem_device *pmem)
++{
++	struct resource *res_mem;
++	int err;
++
++	res_mem = request_mem_region_exclusive(pmem->phys_addr, pmem->size,
++					       "pmem");
++	if (!res_mem) {
++		pr_warn("pmem: request_mem_region_exclusive phys=0x%llx size=0x%zx failed\n",
++			   pmem->phys_addr, pmem->size);
++		return -EINVAL;
++	}
++
++	/*
++	 * Map the memory as non-cachable, as we can't write back the contents
++	 * of the CPU caches in case of a crash.
++	 */
++	pmem->virt_addr = ioremap_nocache(pmem->phys_addr, pmem->size);
++	if (unlikely(!pmem->virt_addr)) {
++		err = -ENXIO;
++		goto out_release;
++	}
++	return 0;
++
++out_release:
++	release_mem_region(pmem->phys_addr, pmem->size);
++	return err;
++}
++
++static void pmem_unmapmem(struct pmem_device *pmem)
++{
++	if (unlikely(!pmem->virt_addr))
++		return;
++
++	iounmap(pmem->virt_addr);
++	release_mem_region(pmem->phys_addr, pmem->size);
++	pmem->virt_addr = NULL;
++}
++
++static int pmem_probe(struct platform_device *pdev)
++{
++	struct pmem_device *pmem;
++	struct gendisk *disk;
++	struct resource *res;
++	int idx, err;
++
++	if (WARN_ON(pdev->num_resources > 1))
++		return -ENXIO;
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!res)
++		return -ENXIO;
++
++	pmem = kzalloc(sizeof(*pmem), GFP_KERNEL);
++	if (unlikely(!pmem))
++		return -ENOMEM;
++
++	pmem->phys_addr = res->start;
++	pmem->size = resource_size(res);
++
++	err = pmem_mapmem(pmem);
++	if (unlikely(err))
++		goto out_free_dev;
++
++	err = -ENOMEM;
++	pmem->pmem_queue = blk_alloc_queue(GFP_KERNEL);
++	if (unlikely(!pmem->pmem_queue))
++		goto out_unmap;
++
++	blk_queue_make_request(pmem->pmem_queue, pmem_make_request);
++	blk_queue_max_hw_sectors(pmem->pmem_queue, 1024);
++	blk_queue_bounce_limit(pmem->pmem_queue, BLK_BOUNCE_ANY);
++
++	disk = alloc_disk(PMEM_MINORS);
++	if (unlikely(!disk))
++		goto out_free_queue;
++
++	idx = atomic_inc_return(&pmem_index) - 1;
++
++	disk->major		= pmem_major;
++	disk->first_minor	= PMEM_MINORS * idx;
++	disk->fops		= &pmem_fops;
++	disk->private_data	= pmem;
++	disk->queue		= pmem->pmem_queue;
++	disk->flags		= GENHD_FL_EXT_DEVT;
++	sprintf(disk->disk_name, "pmem%d", idx);
++	disk->driverfs_dev = &pdev->dev;
++	set_capacity(disk, pmem->size >> SECTOR_SHIFT);
++	pmem->pmem_disk = disk;
++
++	add_disk(disk);
++
++	platform_set_drvdata(pdev, pmem);
++	return 0;
++
++out_free_queue:
++	blk_cleanup_queue(pmem->pmem_queue);
++out_unmap:
++	pmem_unmapmem(pmem);
++out_free_dev:
++	kfree(pmem);
++	return err;
++}
++
++static int pmem_remove(struct platform_device *pdev)
++{
++	struct pmem_device *pmem = platform_get_drvdata(pdev);
++
++	del_gendisk(pmem->pmem_disk);
++	put_disk(pmem->pmem_disk);
++	blk_cleanup_queue(pmem->pmem_queue);
++	pmem_unmapmem(pmem);
++	kfree(pmem);
++
++	return 0;
++}
++
++static struct platform_driver pmem_driver = {
++	.probe		= pmem_probe,
++	.remove		= pmem_remove,
++	.driver		= {
++		.owner	= THIS_MODULE,
++		.name	= "pmem",
++	},
++};
++
++static int __init pmem_init(void)
++{
++	int error;
++
++	pmem_major = register_blkdev(0, "pmem");
++	if (pmem_major < 0)
++		return pmem_major;
++
++	error = platform_driver_register(&pmem_driver);
++	if (error)
++		unregister_blkdev(pmem_major, "pmem");
++	return error;
++}
++
++static void pmem_exit(void)
++{
++	platform_driver_unregister(&pmem_driver);
++	unregister_blkdev(pmem_major, "pmem");
++}
++
++MODULE_AUTHOR("Ross Zwisler <ross.zwisler@linux.intel.com>");
++MODULE_LICENSE("GPL v2");
++
++module_init(pmem_init);
++module_exit(pmem_exit);
+-- 
+1.9.1
+
+_______________________________________________
+Linux-nvdimm mailing list
+Linux-nvdimm@lists.01.org
+https://lists.01.org/mailman/listinfo/linux-nvdimm
